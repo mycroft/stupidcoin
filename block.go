@@ -12,6 +12,7 @@ type Block struct {
 	last_hash []byte
 	timestamp uint64
 	hash      []byte
+	txns      []*Transaction
 }
 
 func CreateBlock(index uint64, last_hash []byte) *Block {
