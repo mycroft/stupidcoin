@@ -7,9 +7,11 @@ import (
 )
 
 var flagCreateKey bool
+var flagMine bool
 
 func init() {
 	flag.BoolVar(&flagCreateKey, "create-key", false, "Create key pair")
+	flag.BoolVar(&flagMine, "mine", false, "Mine block")
 }
 
 var Usage = func() {
@@ -34,7 +36,31 @@ func main() {
 
 		fmt.Printf("Your new key hash: %s\n", GetPublicKeyHash(key.PublicKey))
 
-		os.Exit(0)
+		return
+	}
+
+	if flagMine {
+		chain, err := LoadBlockchain()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		err = chain.MineBlock()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		chain.Dump()
+
+		err = chain.SaveBlockchain()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+
+		return
 	}
 
 	// Nothing done. Showing options.
