@@ -48,7 +48,7 @@ func TestReadWriteKey(t *testing.T) {
 		t.Errorf("Could not read key: %s\n", err)
 	}
 
-	message := "testaroo"
+	message := []byte("testaroo")
 
 	s1, err := SignMessage(*key, message)
 	if err != nil {

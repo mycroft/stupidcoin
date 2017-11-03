@@ -150,8 +150,8 @@ func LoadKeyFromFile(filepath string) (*ecdsa.PrivateKey, error) {
 	return key, nil
 }
 
-func SignMessage(key ecdsa.PrivateKey, message string) ([]byte, error) {
-	r, s, err := ecdsa.Sign(rand.Reader, &key, []byte(message))
+func SignMessage(key ecdsa.PrivateKey, message []byte) ([]byte, error) {
+	r, s, err := ecdsa.Sign(rand.Reader, &key, message)
 	if err != nil {
 		return nil, err
 	}
@@ -162,11 +162,34 @@ func SignMessage(key ecdsa.PrivateKey, message string) ([]byte, error) {
 	return b, nil
 }
 
-func SignVerify(key ecdsa.PublicKey, message string, signature []byte) bool {
+func SignVerify(key ecdsa.PublicKey, message []byte, signature []byte) bool {
 	var r, s big.Int
 
 	r.SetBytes(signature[:32])
 	s.SetBytes(signature[32:])
 
-	return ecdsa.Verify(&key, []byte(message), &r, &s)
+	return ecdsa.Verify(&key, message, &r, &s)
+}
+
+func GetPublicKeyHashBytes(key ecdsa.PublicKey) []byte {
+	bytes := make([]byte, 64)
+
+	copy(bytes[0:32], key.X.Bytes())
+	copy(bytes[32:64], key.Y.Bytes())
+
+	return bytes
+}
+
+func GetPublicKeyFromBytes(bytes []byte) ecdsa.PublicKey {
+	var x, y big.Int
+	var key ecdsa.PublicKey
+
+	x.SetBytes(bytes[:32])
+	key.X = &x
+	y.SetBytes(bytes[32:])
+	key.Y = &y
+
+	key.Curve = elliptic.P256()
+
+	return key
 }
