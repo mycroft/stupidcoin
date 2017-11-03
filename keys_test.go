@@ -41,11 +41,13 @@ func TestReadWriteKey(t *testing.T) {
 	err = WriteKeyToFile(*key, filepath)
 	if err != nil {
 		t.Errorf("Could not write key: %s\n", err)
+		return
 	}
 
 	key_copy, err := LoadKeyFromFile(filepath)
 	if err != nil {
 		t.Errorf("Could not read key: %s\n", err)
+		return
 	}
 
 	message := []byte("testaroo")
@@ -53,30 +55,32 @@ func TestReadWriteKey(t *testing.T) {
 	s1, err := SignMessage(*key, message)
 	if err != nil {
 		t.Errorf("Could not sign message: %s\n", err)
+		return
 	}
 
 	s2, err := SignMessage(*key, message)
 	if err != nil {
 		t.Errorf("Could not sign message: %s\n", err)
+		return
 	}
 
-	for i := 0; i < 1000; i++ {
+	if !SignVerify(key.PublicKey, message, s1) {
+		t.Errorf("Could not validate signature")
+		return
+	}
 
-		if !SignVerify(key.PublicKey, message, s1) {
-			t.Errorf("Could not validate signature")
-		}
+	if !SignVerify(key.PublicKey, message, s2) {
+		t.Errorf("Could not validate signature")
+		return
+	}
 
-		if !SignVerify(key.PublicKey, message, s2) {
-			t.Errorf("Could not validate signature")
-		}
+	if !SignVerify(key_copy.PublicKey, message, s1) {
+		t.Errorf("Could not validate signature")
+		return
+	}
 
-		if !SignVerify(key_copy.PublicKey, message, s1) {
-			t.Errorf("Could not validate signature")
-		}
-
-		if !SignVerify(key_copy.PublicKey, message, s2) {
-			t.Errorf("Could not validate signature")
-		}
-
+	if !SignVerify(key_copy.PublicKey, message, s2) {
+		t.Errorf("Could not validate signature")
+		return
 	}
 }

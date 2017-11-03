@@ -2,6 +2,8 @@ package main
 
 import (
 	"crypto/sha256"
+
+	"fmt"
 	"os"
 	"strconv"
 	"time"
@@ -45,6 +47,32 @@ func (b *Block) SaveBlock(fd *os.File) error {
 	WriteBytesToFd(fd, b.hash)
 
 	return nil
+}
+
+func (b *Block) Dump() string {
+	var dump string
+
+	dump = fmt.Sprintf("Hash: %x\n", b.hash)
+	dump += fmt.Sprintf("LastHash: %x\n", b.last_hash)
+
+	for i := 0; i < len(b.txns); i++ {
+		dump += fmt.Sprintf("Txn: %x\n", b.txns[i].hash)
+
+		for j := 0; j < len(b.txns[i].inputs); j++ {
+			dump += fmt.Sprintf("Input: %v\n", b.txns[i].inputs[j].script)
+		}
+
+		for j := 0; j < len(b.txns[i].outputs); j++ {
+			dump += fmt.Sprintf("Output: %v\n", b.txns[i].outputs[j].script)
+		}
+
+	}
+
+	return dump
+}
+
+func (b *Block) AddTransaction(txn *Transaction) {
+	b.txns = append(b.txns, txn)
 }
 
 func CreateBlockFromFd(fd *os.File) (*Block, error) {

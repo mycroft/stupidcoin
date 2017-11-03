@@ -51,6 +51,12 @@ func (script *Script) addBytes(bytes []byte) {
 	script.data = append(script.data, bytes...)
 }
 
+func (script *Script) addPushBytes(bytes []byte) {
+	script.addInstruction(OP_PUSH_BYTES)
+	script.addWord(uint16(len(bytes)))
+	script.data = append(script.data, bytes...)
+}
+
 func (script *Script) dump() {
 	fmt.Println(script.data)
 }
@@ -58,9 +64,7 @@ func (script *Script) dump() {
 func BuildP2PKScript(key []byte) *Script {
 	s := new(Script)
 
-	s.addInstruction(OP_PUSH_BYTES)
-	s.addWord(uint16(len(key)))
-	s.addBytes(key)
+	s.addPushBytes(key)
 	s.addInstruction(OP_CHECKSIG)
 
 	return s

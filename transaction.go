@@ -4,18 +4,18 @@ import ()
 
 type TxInput struct {
 	txhash []byte
-	script []byte
+	script *Script
 }
 
 type TxOutput struct {
-	script []byte
+	script *Script
 	amount float64
 }
 
 type Transaction struct {
 	hash    []byte
-	inputs  []TxInput
-	outputs []TxOutput
+	inputs  []*TxInput
+	outputs []*TxOutput
 }
 
 func CreateTransaction() *Transaction {
@@ -24,10 +24,18 @@ func CreateTransaction() *Transaction {
 	return tx
 }
 
-func (tx *Transaction) AddInput(input []byte) {
+func CreateTxOutput(script *Script, amount float64) *TxOutput {
+	output := new(TxOutput)
+	output.script = script
+	output.amount = amount
 
+	return output
 }
 
-func (tx *Transaction) AddOutput(input []byte) {
+func (tx *Transaction) AddInput(input *TxInput) {
+	tx.inputs = append(tx.inputs, input)
+}
 
+func (tx *Transaction) AddOutput(output *TxOutput) {
+	tx.outputs = append(tx.outputs, output)
 }

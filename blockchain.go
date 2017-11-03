@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/ecdsa"
 	"fmt"
 	"os"
 )
@@ -65,7 +66,7 @@ func (bc *Blockchain) SaveBlockchain() error {
 	return nil
 }
 
-func (bc *Blockchain) MineBlock() error {
+func (bc *Blockchain) MineBlock(key ecdsa.PublicKey) error {
 	var last, b *Block
 
 	if len(bc.blocks) == 0 {
@@ -74,8 +75,16 @@ func (bc *Blockchain) MineBlock() error {
 	} else {
 		last = bc.blocks[bc.last_index]
 		b = CreateBlock(bc.last_index+1, last.hash)
-
 	}
+
+	// Add a money creation output
+	txn := CreateTransaction()
+	scp := BuildP2PKScript(PublicKeyToBytes(key))
+	txOutput := CreateTxOutput(scp, 100)
+	txn.AddOutput(txOutput)
+	b.AddTransaction(txn)
+
+	fmt.Println(b.Dump())
 
 	bc.blocks = append(bc.blocks, b)
 	bc.last_index = b.index
@@ -85,7 +94,7 @@ func (bc *Blockchain) MineBlock() error {
 
 func (bc *Blockchain) Dump() {
 	for i := 0; i < len(bc.blocks); i++ {
-		fmt.Printf("%d: %x\n", bc.blocks[i].index, bc.blocks[i].hash)
+		fmt.Printf(bc.blocks[i].Dump())
 	}
 
 	fmt.Printf("%d block(s).\n", len(bc.blocks))

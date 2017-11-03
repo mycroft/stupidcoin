@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 
 	"encoding/binary"
+	// "fmt"
 	"io"
 	"math/big"
 	"os"
@@ -156,26 +157,24 @@ func SignMessage(key ecdsa.PrivateKey, message []byte) ([]byte, error) {
 		return nil, err
 	}
 
-	var b []byte
-	b = append(r.Bytes(), s.Bytes()...)
+	bytes := make([]byte, 0)
+	bytes = append(bytes, BigIntToBytes(*r)...)
+	bytes = append(bytes, BigIntToBytes(*s)...)
 
-	return b, nil
+	return bytes, nil
 }
 
 func SignVerify(key ecdsa.PublicKey, message []byte, signature []byte) bool {
-	var r, s big.Int
-
-	r.SetBytes(signature[:32])
-	s.SetBytes(signature[32:])
+	r, idx := BytesToBigInt(signature, 0)
+	s, _ := BytesToBigInt(signature, idx)
 
 	return ecdsa.Verify(&key, message, &r, &s)
 }
 
-func GetPublicKeyHashBytes(key ecdsa.PublicKey) []byte {
-	bytes := make([]byte, 64)
-
-	copy(bytes[0:32], key.X.Bytes())
-	copy(bytes[32:64], key.Y.Bytes())
+func PublicKeyToBytes(key ecdsa.PublicKey) []byte {
+	bytes := make([]byte, 0)
+	bytes = append(bytes, BigIntToBytes(*key.X)...)
+	bytes = append(bytes, BigIntToBytes(*key.Y)...)
 
 	return bytes
 }
@@ -184,12 +183,30 @@ func GetPublicKeyFromBytes(bytes []byte) ecdsa.PublicKey {
 	var x, y big.Int
 	var key ecdsa.PublicKey
 
-	x.SetBytes(bytes[:32])
+	key.Curve = elliptic.P256()
+	x, idx := BytesToBigInt(bytes, 0)
 	key.X = &x
-	y.SetBytes(bytes[32:])
+	y, idx = BytesToBigInt(bytes, idx)
 	key.Y = &y
 
-	key.Curve = elliptic.P256()
-
 	return key
+}
+
+func BigIntToBytes(i big.Int) []byte {
+	b := make([]byte, 2)
+
+	binary.LittleEndian.PutUint16(b, uint16(len(i.Bytes())))
+
+	b = append(b, i.Bytes()...)
+
+	return b
+}
+
+func BytesToBigInt(b []byte, idx int) (big.Int, int) {
+	var i big.Int
+
+	size := int(binary.LittleEndian.Uint16(b[idx : idx+2]))
+	i.SetBytes(b[idx+2 : idx+2+size])
+
+	return i, idx + 2 + size
 }
