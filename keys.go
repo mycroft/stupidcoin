@@ -7,7 +7,6 @@ import (
 	"crypto/sha256"
 
 	"encoding/binary"
-	// "fmt"
 	"io"
 	"math/big"
 	"os"
@@ -58,45 +57,70 @@ func GetPublicKeyHash(key ecdsa.PublicKey) string {
 	return base58.Encode(pk)
 }
 
-func WriteKeyToFile(key ecdsa.PrivateKey, filepath string) error {
-	// X, Y, D.
-	fd, err := os.Create(filepath)
-	if err != nil {
-		return err
-	}
+// Key will be encoded like this:
+// type + len(D) + D + len(x) + X + len(y) + y + hash
+// type is 1 for private key, 2 for public key
+// len are bytes
+// hash is last 4 bytes of sha256(len(D) + ... y)
+func PrivateKeyToBytes(key ecdsa.PrivateKey) []byte {
+	var pk []byte
 
-	err = WriteBigIntToFile(fd, *key.PublicKey.X)
-	if err != nil {
-		return err
-	}
+	pk = append(pk, BigIntToBytes(*key.D)...)
+	pk = append(pk, BigIntToBytes(*key.X)...)
+	pk = append(pk, BigIntToBytes(*key.Y)...)
 
-	err = WriteBigIntToFile(fd, *key.PublicKey.Y)
-	if err != nil {
-		return err
-	}
+	s := sha256.Sum256(pk)
 
-	err = WriteBigIntToFile(fd, *key.D)
-	if err != nil {
-		return err
-	}
+	pk = append(pk, s[0:4]...)
 
-	fd.Close()
-
-	return nil
+	return append([]byte{0x01}, pk...)
 }
 
-func WriteBigIntToFile(fd *os.File, bigInt big.Int) error {
+// Returns key &  bytes read
+func BytesToPrivateKey(b []byte) (ecdsa.PrivateKey, int, error) {
+	var key ecdsa.PrivateKey
+	idx := 0
+
+	// Read Key.D
+	key.D, idx = BytesToBigInt(b, idx)
+
+	// Read Key.X
+	key.X, idx = BytesToBigInt(b, idx)
+
+	// Read Key.Y
+	key.Y, idx = BytesToBigInt(b, idx)
+
+	// Read hash
+	hash := make([]byte, 4)
+	copy(hash, b[idx:idx+4])
+
+	// s := sha256.Sum256(b[0:idx])
+	idx += 4
+
+	return key, idx, nil
+}
+
+func BigIntToBytes(bigInt big.Int) []byte {
 	bs := make([]byte, 4)
 	size := len(bigInt.Bytes())
-	binary.LittleEndian.PutUint32(bs, uint32(size))
 
-	_, err := fd.Write(bs)
-	if err != nil {
-		return err
+	if size > 2^32 {
+		panic("Message too big")
 	}
 
-	_, err = fd.Write(bigInt.Bytes())
-	return err
+	binary.LittleEndian.PutUint32(bs, uint32(size))
+
+	return append(bs, bigInt.Bytes()...)
+}
+
+func BytesToBigInt(b []byte, idx int) (*big.Int, int) {
+	intsize := 4
+	i := new(big.Int)
+
+	size := int(binary.LittleEndian.Uint32(b[idx : idx+intsize]))
+	i.SetBytes(b[idx+intsize : idx+intsize+size])
+
+	return i, idx + intsize + size
 }
 
 func ReadBigIntFromFile(fd *os.File) (*big.Int, error) {
@@ -124,33 +148,6 @@ func ReadBigIntFromFile(fd *os.File) (*big.Int, error) {
 	return bigInt, err
 }
 
-func LoadKeyFromFile(filepath string) (*ecdsa.PrivateKey, error) {
-	fd, err := os.Open(filepath)
-	if err != nil {
-		return nil, err
-	}
-
-	key := new(ecdsa.PrivateKey)
-	key.PublicKey.X, err = ReadBigIntFromFile(fd)
-	if err != nil {
-		return nil, err
-	}
-
-	key.PublicKey.Y, err = ReadBigIntFromFile(fd)
-	if err != nil {
-		return nil, err
-	}
-
-	key.D, err = ReadBigIntFromFile(fd)
-	if err != nil {
-		return nil, err
-	}
-
-	key.Curve = elliptic.P256()
-
-	return key, nil
-}
-
 func SignMessage(key ecdsa.PrivateKey, message []byte) ([]byte, error) {
 	r, s, err := ecdsa.Sign(rand.Reader, &key, message)
 	if err != nil {
@@ -168,7 +165,7 @@ func SignVerify(key ecdsa.PublicKey, message []byte, signature []byte) bool {
 	r, idx := BytesToBigInt(signature, 0)
 	s, _ := BytesToBigInt(signature, idx)
 
-	return ecdsa.Verify(&key, message, &r, &s)
+	return ecdsa.Verify(&key, message, r, s)
 }
 
 func PublicKeyToBytes(key ecdsa.PublicKey) []byte {
@@ -180,33 +177,12 @@ func PublicKeyToBytes(key ecdsa.PublicKey) []byte {
 }
 
 func GetPublicKeyFromBytes(bytes []byte) ecdsa.PublicKey {
-	var x, y big.Int
+	var idx int
 	var key ecdsa.PublicKey
 
 	key.Curve = elliptic.P256()
-	x, idx := BytesToBigInt(bytes, 0)
-	key.X = &x
-	y, idx = BytesToBigInt(bytes, idx)
-	key.Y = &y
+	key.X, idx = BytesToBigInt(bytes, 0)
+	key.Y, idx = BytesToBigInt(bytes, idx)
 
 	return key
-}
-
-func BigIntToBytes(i big.Int) []byte {
-	b := make([]byte, 2)
-
-	binary.LittleEndian.PutUint16(b, uint16(len(i.Bytes())))
-
-	b = append(b, i.Bytes()...)
-
-	return b
-}
-
-func BytesToBigInt(b []byte, idx int) (big.Int, int) {
-	var i big.Int
-
-	size := int(binary.LittleEndian.Uint16(b[idx : idx+2]))
-	i.SetBytes(b[idx+2 : idx+2+size])
-
-	return i, idx + 2 + size
 }

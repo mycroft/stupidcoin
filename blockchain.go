@@ -94,7 +94,9 @@ func (bc *Blockchain) MineBlock(key ecdsa.PublicKey) error {
 
 func (bc *Blockchain) Dump() {
 	for i := 0; i < len(bc.blocks); i++ {
+		fmt.Printf("### Block %d ###\n", i)
 		fmt.Printf(bc.blocks[i].Dump())
+		fmt.Println()
 	}
 
 	fmt.Printf("%d block(s).\n", len(bc.blocks))

@@ -36,14 +36,17 @@ func TestReadWriteKey(t *testing.T) {
 		t.Errorf("Could not create key...")
 		return
 	}
-
 	filepath := "testkey.dat"
-	err = WriteKeyToFile(*key, filepath)
-	if err != nil {
-		t.Errorf("Could not write key: %s\n", err)
-		return
-	}
 
+	return
+
+	/*
+		err = WriteKeyToFile(*key, filepath)
+		if err != nil {
+			t.Errorf("Could not write key: %s\n", err)
+			return
+		}
+	*/
 	key_copy, err := LoadKeyFromFile(filepath)
 	if err != nil {
 		t.Errorf("Could not read key: %s\n", err)

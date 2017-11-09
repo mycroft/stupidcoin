@@ -1,2 +1,4 @@
 stupidcoin
+config.json
+.blocks.dat
 *.key
