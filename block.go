@@ -46,11 +46,19 @@ func (b *Block) ComputeHash(update bool) []byte {
 	return hash
 }
 
+// XXX to rewrite using bytes...
 func (b *Block) SaveBlock(fd *os.File) error {
 	WriteUint64ToFd(fd, b.index)
 	WriteBytesToFd(fd, b.last_hash)
 	WriteUint64ToFd(fd, b.timestamp)
 	WriteBytesToFd(fd, b.hash)
+
+	// Save transactions
+	WriteUint32ToFd(fd, uint32(len(b.txns)))
+
+	for _, txn := range b.txns {
+		txn.SaveTransaction(fd)
+	}
 
 	return nil
 }
@@ -66,11 +74,14 @@ func (b *Block) Dump() string {
 		dump += fmt.Sprintf("Txn: %x\n", b.txns[i].hash)
 
 		for j := 0; j < len(b.txns[i].inputs); j++ {
-			dump += fmt.Sprintf("- Input: %v\n", b.txns[i].inputs[j].script)
+			dump += fmt.Sprintf("- Input: %v\n",
+				b.txns[i].inputs[j].script.data)
 		}
 
 		for j := 0; j < len(b.txns[i].outputs); j++ {
-			dump += fmt.Sprintf("- Output: %v\n", b.txns[i].outputs[j].script)
+			dump += fmt.Sprintf("- Output: %f - %v\n",
+				b.txns[i].outputs[j].amount,
+				b.txns[i].outputs[j].script.data)
 		}
 
 	}
@@ -84,6 +95,7 @@ func (b *Block) AddTransaction(txn *Transaction) {
 
 func CreateBlockFromFd(fd *os.File) (*Block, error) {
 	var err error
+	var i uint32
 	b := new(Block)
 
 	b.index, err = ReadUint64FromFd(fd)
@@ -104,6 +116,20 @@ func CreateBlockFromFd(fd *os.File) (*Block, error) {
 	b.hash, err = ReadBytesFromFd(fd)
 	if err != nil {
 		return nil, err
+	}
+
+	txn_cnt, err := ReadUint32FromFd(fd)
+	if err != nil {
+		return nil, err
+	}
+
+	for i = 0; i < txn_cnt; i++ {
+		txn, err := CreateTransactionFromFd(fd)
+		if err != nil {
+			return nil, err
+		}
+
+		b.AddTransaction(txn)
 	}
 
 	return b, nil

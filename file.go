@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"math"
 	"os"
 )
 
@@ -31,6 +32,16 @@ func WriteBytesToFd(fd *os.File, bytes []byte) error {
 
 	// Writes bytes
 	_, err := fd.Write(bytes)
+
+	return err
+}
+
+func WriteFloat64ToFd(fd *os.File, f float64) error {
+	bits := math.Float64bits(f)
+	buffer := make([]byte, 8)
+	binary.LittleEndian.PutUint64(buffer, bits)
+
+	_, err := fd.Write(buffer)
 
 	return err
 }
@@ -71,4 +82,15 @@ func ReadBytesFromFd(fd *os.File) ([]byte, error) {
 	}
 
 	return buffer, nil
+}
+
+func ReadFloat64FromFd(fd *os.File) (float64, error) {
+	i, err := ReadUint64FromFd(fd)
+	if err != nil {
+		return 0, err
+	}
+
+	f := math.Float64frombits(i)
+
+	return f, nil
 }
