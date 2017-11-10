@@ -10,6 +10,7 @@ var flagConfigFile string
 var flagCreateKey bool
 var flagListKeys bool
 var flagMine, flagDumpChain bool
+var flagWeb bool
 
 func init() {
 	flag.BoolVar(&flagCreateKey, "create-key", false, "Create key pair")
@@ -17,6 +18,7 @@ func init() {
 	flag.BoolVar(&flagMine, "mine", false, "Mine block")
 	flag.StringVar(&flagConfigFile, "config-file", "config.json", "Configuration file to use")
 	flag.BoolVar(&flagDumpChain, "dump", false, "Dump chain (debug)")
+	flag.BoolVar(&flagWeb, "web", false, "Launch API server")
 }
 
 var Usage = func() {
@@ -65,17 +67,18 @@ func main() {
 	}
 
 	key, err := wallet.GetPublicKeyByHash(config.MiningAddr)
+	config.key = key
 	if err != nil {
 		panic(err)
 	}
 
-	if flagMine {
-		chain, err := LoadBlockchain()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+	chain, err := LoadBlockchain()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 
+	if flagMine {
 		err = chain.MineBlock(key)
 		if err != nil {
 			fmt.Println(err)
@@ -94,15 +97,17 @@ func main() {
 	}
 
 	if flagDumpChain {
-		chain, err := LoadBlockchain()
+		chain.Dump()
+
+		return
+	}
+
+	if flagWeb {
+		err := WebRun(config, chain)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
-
-		chain.Dump()
-
-		return
 	}
 
 	// Nothing done. Showing options.

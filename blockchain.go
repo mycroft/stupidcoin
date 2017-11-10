@@ -84,8 +84,6 @@ func (bc *Blockchain) MineBlock(key ecdsa.PublicKey) error {
 	txn.AddOutput(txOutput)
 	b.AddTransaction(txn)
 
-	fmt.Println(b.Dump())
-
 	bc.blocks = append(bc.blocks, b)
 	bc.last_index = b.index
 

@@ -1,12 +1,14 @@
 package main
 
 import (
+	"crypto/ecdsa"
 	"encoding/json"
 	"io/ioutil"
 )
 
 type Config struct {
 	Wallet     string `json:"wallet"`
+	key        ecdsa.PublicKey
 	MiningAddr string `json:"mining-addr"`
 }
 
