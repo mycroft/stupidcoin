@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/sha256"
+
 	"fmt"
 	"os"
 )
@@ -41,6 +43,28 @@ func (tx *Transaction) AddInput(input *TxInput) {
 
 func (tx *Transaction) AddOutput(output *TxOutput) {
 	tx.outputs = append(tx.outputs, output)
+}
+
+func (tx *Transaction) ComputeHash(update bool) []byte {
+	h := sha256.New()
+
+	for _, input := range tx.inputs {
+		h.Write(input.txhash)
+		h.Write(input.script.data)
+	}
+
+	for _, output := range tx.outputs {
+		h.Write(output.script.data)
+		// XXX Add amount
+	}
+
+	hash := h.Sum(nil)
+
+	if update {
+		tx.hash = hash
+	}
+
+	return hash
 }
 
 // XXX to rewrite using bytes...

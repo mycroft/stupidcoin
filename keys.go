@@ -79,6 +79,7 @@ func PrivateKeyToBytes(key ecdsa.PrivateKey) []byte {
 // Returns key &  bytes read
 func BytesToPrivateKey(b []byte) (ecdsa.PrivateKey, int, error) {
 	var key ecdsa.PrivateKey
+	key.Curve = elliptic.P256()
 	idx := 0
 
 	// Read Key.D

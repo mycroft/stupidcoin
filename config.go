@@ -7,13 +7,20 @@ import (
 )
 
 type Config struct {
-	Wallet     string `json:"wallet"`
-	key        ecdsa.PublicKey
-	MiningAddr string `json:"mining-addr"`
+	Blockchain    string `json:"blockchain"`
+	Wallet        string `json:"wallet"`
+	key           ecdsa.PublicKey
+	MiningAddr    string `json:"mining-addr"`
+	WebListenAddr string `json:"listen-addr"`
 }
 
 func LoadConfiguration(path string) (Config, error) {
 	var config Config
+
+	// Default values...
+	config.Blockchain = ".blocks.dat"
+	config.Wallet = "wallet.key"
+	config.WebListenAddr = ":8080"
 
 	content, err := ioutil.ReadFile(path)
 	if err != nil {

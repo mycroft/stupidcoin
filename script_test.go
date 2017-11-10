@@ -99,3 +99,39 @@ func TestScript3(t *testing.T) {
 
 	return
 }
+
+func TestScript4(t *testing.T) {
+	// Create some key pair
+	key, err := CreateKeyPair()
+	if err != nil {
+		t.Errorf("Could not create key...")
+	}
+
+	// Create an output script.
+	hash := GetPublicKeyHash(key.PublicKey)
+	output := BuildP2PKHScript([]byte(hash))
+
+	// Create input script (signature, public key as bytes)
+	input := new(Script)
+
+	sign, err := SignMessage(*key, output.data)
+	if err != nil {
+		t.Errorf("Could not sign output.")
+	}
+
+	input.addPushBytes(sign)
+	input.addPushBytes(PublicKeyToBytes(key.PublicKey))
+
+	// Run vm over this input & output
+	vm := new(VM)
+	res, err := vm.runInputOutput(input, output)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if res != true {
+		t.Error("Result is not true.")
+	}
+
+	return
+}

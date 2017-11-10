@@ -75,13 +75,13 @@ func (b *Block) Dump() string {
 
 		for j := 0; j < len(b.txns[i].inputs); j++ {
 			dump += fmt.Sprintf("- Input: %v\n",
-				b.txns[i].inputs[j].script.data)
+				b.txns[i].inputs[j].script.String())
 		}
 
 		for j := 0; j < len(b.txns[i].outputs); j++ {
 			dump += fmt.Sprintf("- Output: %f - %v\n",
 				b.txns[i].outputs[j].amount,
-				b.txns[i].outputs[j].script.data)
+				b.txns[i].outputs[j].script.String())
 		}
 
 	}

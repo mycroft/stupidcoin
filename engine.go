@@ -171,6 +171,20 @@ func (vm *VM) runInputOutput(input *Script, output *Script) (bool, error) {
 			hash := md5.Sum(elem1)
 			vm.stack.Push(hash[:])
 
+		case OP_HASH_KEY:
+			elem1, err := vm.stack.Pop()
+			if err != nil {
+				return false, errors.New("Not enough elements in stack")
+			}
+
+			// Recreate key
+			pk := GetPublicKeyFromBytes(elem1)
+
+			// Get hash
+			hash := GetPublicKeyHash(pk)
+
+			vm.stack.Push([]byte(hash))
+
 		case OP_CHECKSIG:
 			// Pop public key
 			key, err := vm.stack.Pop()

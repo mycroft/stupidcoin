@@ -113,3 +113,14 @@ func (w *Wallet) GetPublicKeyByHash(hash string) (ecdsa.PublicKey, error) {
 
 	return ecdsa.PublicKey{}, errors.New("Could not find key")
 }
+
+func (w *Wallet) GetPrivateKeyByHash(hash string) (ecdsa.PrivateKey, error) {
+	for _, key := range w.PrivateKeys {
+		current_hash := GetPublicKeyHash(key.PublicKey)
+		if current_hash == hash {
+			return key, nil
+		}
+	}
+
+	return ecdsa.PrivateKey{}, errors.New("Could not find key")
+}

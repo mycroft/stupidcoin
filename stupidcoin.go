@@ -16,7 +16,7 @@ func init() {
 	flag.BoolVar(&flagCreateKey, "create-key", false, "Create key pair")
 	flag.BoolVar(&flagListKeys, "list-keys", false, "List keys in wallet")
 	flag.BoolVar(&flagMine, "mine", false, "Mine block")
-	flag.StringVar(&flagConfigFile, "config-file", "config.json", "Configuration file to use")
+	flag.StringVar(&flagConfigFile, "config", "config.json", "Configuration file to use")
 	flag.BoolVar(&flagDumpChain, "dump", false, "Dump chain (debug)")
 	flag.BoolVar(&flagWeb, "web", false, "Launch API server")
 }
@@ -72,7 +72,7 @@ func main() {
 		panic(err)
 	}
 
-	chain, err := LoadBlockchain()
+	chain, err := LoadBlockchain(config)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -87,7 +87,7 @@ func main() {
 
 		chain.Dump()
 
-		err = chain.SaveBlockchain()
+		err = chain.SaveBlockchain(config)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
@@ -103,7 +103,7 @@ func main() {
 	}
 
 	if flagWeb {
-		err := WebRun(config, chain)
+		err := WebRun(config, *wallet, chain)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
