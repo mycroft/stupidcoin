@@ -4,7 +4,10 @@ import (
 	"crypto/sha256"
 
 	"fmt"
+	"math"
 	"os"
+	"strconv"
+	"time"
 )
 
 type TxInput struct {
@@ -18,13 +21,15 @@ type TxOutput struct {
 }
 
 type Transaction struct {
-	hash    []byte
-	inputs  []*TxInput
-	outputs []*TxOutput
+	hash      []byte
+	timestamp uint64
+	inputs    []*TxInput
+	outputs   []*TxOutput
 }
 
 func CreateTransaction() *Transaction {
 	tx := new(Transaction)
+	tx.timestamp = uint64(time.Now().Unix())
 
 	return tx
 }
@@ -37,6 +42,25 @@ func CreateTxOutput(script *Script, amount float64) *TxOutput {
 	return output
 }
 
+func (tx *Transaction) String() string {
+	var dump string
+
+	dump += fmt.Sprintf("Txn: %x\n", tx.hash)
+
+	for j := 0; j < len(tx.inputs); j++ {
+		dump += fmt.Sprintf("- Input: %v\n",
+			tx.inputs[j].script.String())
+	}
+
+	for j := 0; j < len(tx.outputs); j++ {
+		dump += fmt.Sprintf("- Output: %f - %v\n",
+			tx.outputs[j].amount,
+			tx.outputs[j].script.String())
+	}
+
+	return dump
+}
+
 func (tx *Transaction) AddInput(input *TxInput) {
 	tx.inputs = append(tx.inputs, input)
 }
@@ -47,6 +71,7 @@ func (tx *Transaction) AddOutput(output *TxOutput) {
 
 func (tx *Transaction) ComputeHash(update bool) []byte {
 	h := sha256.New()
+	h.Write([]byte(strconv.FormatUint(tx.timestamp, 10)))
 
 	for _, input := range tx.inputs {
 		h.Write(input.txhash)
@@ -55,7 +80,7 @@ func (tx *Transaction) ComputeHash(update bool) []byte {
 
 	for _, output := range tx.outputs {
 		h.Write(output.script.data)
-		// XXX Add amount
+		h.Write([]byte(strconv.FormatUint(math.Float64bits(output.amount), 10)))
 	}
 
 	hash := h.Sum(nil)
@@ -89,7 +114,7 @@ func (tx *Transaction) SaveTransaction(fd *os.File) error {
 func CreateTransactionFromFd(fd *os.File) (*Transaction, error) {
 	var err error
 	var i uint32
-	txn := new(Transaction)
+	txn := CreateTransaction()
 
 	txn.hash, err = ReadBytesFromFd(fd)
 	if err != nil {
@@ -103,7 +128,6 @@ func CreateTransactionFromFd(fd *os.File) (*Transaction, error) {
 
 	for i = 0; i < input_cnt; i++ {
 		input := new(TxInput)
-		fmt.Println(input_cnt, i)
 
 		input.txhash, err = ReadBytesFromFd(fd)
 		if err != nil {

@@ -11,6 +11,12 @@ type TxnOrder struct {
 	Amount float64
 }
 
+type OutputFund struct {
+	txn       *Transaction
+	output_id int
+	script    *Script
+}
+
 type Blockchain struct {
 	last_index uint64
 	blocks     []*Block
@@ -118,67 +124,125 @@ func (bc *Blockchain) Dump() {
 }
 
 func (bc *Blockchain) CreateTransaction(wallet Wallet, txnOrder *TxnOrder) {
-	// Go through block chain to find output transaction with available coins.
+	required_amount := txnOrder.Amount
+	used_funds := make([]*OutputFund, 0)
+	funds := bc.GetFunds(&wallet)
+
+	for _, fund := range funds {
+		required_amount -= fund.txn.outputs[fund.output_id].amount
+		used_funds = append(used_funds, fund)
+
+		if required_amount <= 0 {
+			break
+		}
+	}
+
+	if required_amount > 0 {
+		// could not create transaction.
+		fmt.Println("Not enough funds.")
+		return
+	}
+
+	txn := new(Transaction)
+
+	for _, used_fund := range used_funds {
+		input := new(TxInput)
+		input.script = used_fund.script
+		input.txhash = used_fund.txn.hash
+
+		txn.AddInput(input)
+	}
+
+	output := new(TxOutput)
+	output.amount = txnOrder.Amount
+	output.script = BuildP2PKHScript([]byte(txnOrder.Addr))
+	txn.AddOutput(output)
+
+	// Add remaining funds into a new output
+	if required_amount < 0 {
+		output = new(TxOutput)
+		output.amount = 0 - required_amount
+		output.script = BuildP2PKHScript([]byte(GetPublicKeyHash(wallet.PrivateKeys[0].PublicKey)))
+		txn.AddOutput(output)
+	}
+
+	for _, used_fund := range used_funds {
+		// Copy other outputs
+		for i, output := range used_fund.txn.outputs {
+			if used_fund.output_id != i {
+				txn.AddOutput(output)
+			}
+		}
+	}
+
+	txn.ComputeHash(true)
+	bc.txnQueue = append(bc.txnQueue, txn)
+
+	return
+}
+
+func TryOutput(wallet *Wallet, outputScript *Script) (*Script, bool) {
+	// Prepare a VM to execute output scripts.
 	vm := new(VM)
 
-	pk := wallet.PrivateKeys[0]
+	for _, pk := range wallet.PrivateKeys {
+		input_scr := new(Script)
 
-	// for each block...
-	for i := len(bc.blocks) - 1; i > 0; i-- {
-		current_block := bc.blocks[i]
-		// for each transaction...
-		for j := 0; j < len(current_block.txns); j++ {
-			current_txn := current_block.txns[j]
-			// for each output...
-			for k := 0; k < len(current_txn.outputs); k++ {
-				input_scr := new(Script)
+		sign, _ := SignMessage(pk, outputScript.data)
 
-				sign, err := SignMessage(pk, current_txn.outputs[k].script.data)
-				if err != nil {
-					fmt.Println(err)
-					return
-				}
+		input_scr.addPushBytes(sign)
 
-				input_scr.addPushBytes(sign)
+		res, _ := vm.runInputOutput(*input_scr, *outputScript)
 
-				res, err := vm.runInputOutput(input_scr, current_txn.outputs[k].script)
-				if err != nil {
-					fmt.Println(err)
-					return
-				}
+		if res {
+			return input_scr, true
+		}
 
-				if res && current_txn.outputs[k].amount >= txnOrder.Amount {
-					// We found a transaction that suits !
+		// Try P2PKH
+		input_scr.addPushBytes(PublicKeyToBytes(pk.PublicKey))
 
-					txn := new(Transaction)
-					input := new(TxInput)
-					input.script = input_scr
-					input.txhash = current_txn.hash
+		res, _ = vm.runInputOutput(*input_scr, *outputScript)
 
-					txn.AddInput(input)
+		if res {
+			return input_scr, true
+		}
+	}
 
-					output := new(TxOutput)
-					output.amount = txnOrder.Amount
-					output.script = BuildP2PKHScript([]byte(txnOrder.Addr))
+	return nil, false
+}
 
-					txn.AddOutput(output)
+// Scan blockchain for unspent output transactions matching out wallet private keys
+func (bc *Blockchain) GetFunds(wallet *Wallet) []*OutputFund {
+	used_inputs := make(map[string]bool)
+	funds := make([]*OutputFund, 0)
 
-					if current_txn.outputs[k].amount-txnOrder.Amount > 0 {
-						output = new(TxOutput)
-						output.amount = current_txn.outputs[k].amount - txnOrder.Amount
-						output.script = BuildP2PKScript([]byte(GetPublicKeyHash(pk.PublicKey)))
-						txn.AddOutput(output)
-					}
+	// Scan all blocks for unspent outputs matching our private keys.
+	for j := len(bc.blocks) - 1; j >= 0; j-- {
+		for _, tx := range bc.blocks[j].txns {
+			for _, input := range tx.inputs {
+				used_inputs[string(input.txhash)] = true
+			}
+			if _, ok := used_inputs[string(tx.hash)]; ok {
+				// This transaction was already used. Skipping.
+				continue
+			}
+			for k, output := range tx.outputs {
+				// Try output.
+				script, res := TryOutput(wallet, output.script)
+				if res {
+					// Adding this transaction in list
+					of := new(OutputFund)
+					of.output_id = k
+					of.txn = tx
+					of.script = script
 
-					txn.ComputeHash(true)
+					funds = append(funds, of)
 
-					bc.txnQueue = append(bc.txnQueue, txn)
-
-					return
+					// break
 				}
 			}
 		}
 	}
 
-	return
+	return funds
 }

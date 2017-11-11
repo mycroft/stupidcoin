@@ -11,6 +11,7 @@ var flagCreateKey bool
 var flagListKeys bool
 var flagMine, flagDumpChain bool
 var flagWeb bool
+var flagScan bool
 
 func init() {
 	flag.BoolVar(&flagCreateKey, "create-key", false, "Create key pair")
@@ -19,6 +20,7 @@ func init() {
 	flag.StringVar(&flagConfigFile, "config", "config.json", "Configuration file to use")
 	flag.BoolVar(&flagDumpChain, "dump", false, "Dump chain (debug)")
 	flag.BoolVar(&flagWeb, "web", false, "Launch API server")
+	flag.BoolVar(&flagScan, "scan", false, "Scan blockchain for our funds")
 }
 
 var Usage = func() {
@@ -99,6 +101,14 @@ func main() {
 	if flagDumpChain {
 		chain.Dump()
 
+		return
+	}
+
+	if flagScan {
+		funds := chain.GetFunds(wallet)
+		for _, fund := range funds {
+			fmt.Printf("%x: %f\n", fund.txn.hash, fund.txn.outputs[fund.output_id].amount)
+		}
 		return
 	}
 

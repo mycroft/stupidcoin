@@ -89,6 +89,8 @@ func (script *Script) String() string {
 			elem = append(elem, "OP_DUP")
 		case OP_SWAP:
 			elem = append(elem, "OP_SWAP")
+		case OP_EQUAL:
+			elem = append(elem, "OP_EQUAL")
 		case OP_HASH_KEY:
 			elem = append(elem, "OP_HASH_KEY")
 		case OP_CHECKSIG:

@@ -49,9 +49,9 @@ func (vm *VM) hasEnough(bytes int) bool {
 	return len(vm.script.data) >= (vm.current_idx + bytes)
 }
 
-func (vm *VM) runInputOutput(input *Script, output *Script) (bool, error) {
+func (vm *VM) runInputOutput(input Script, output Script) (bool, error) {
 	vm.stack = NewStack()
-	vm.script = input
+	vm.script = &input
 	vm.script.data = append(vm.script.data, output.data...)
 
 	for vm.current_idx = 0; vm.current_idx < len(vm.script.data); {
@@ -140,7 +140,7 @@ func (vm *VM) runInputOutput(input *Script, output *Script) (bool, error) {
 
 			for j := 0; j < len(elem1); j++ {
 				if elem1[j] != elem2[j] {
-					return false, errors.New("OP_EQUAL: Elements are not equal")
+					return false, errors.New(fmt.Sprintf("OP_EQUAL: Elements are not equal (%s / %s)", string(elem1), string(elem2)))
 				}
 			}
 

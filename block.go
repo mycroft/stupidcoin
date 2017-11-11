@@ -34,9 +34,13 @@ func (b *Block) ComputeHash(update bool) []byte {
 	h := sha256.New()
 
 	h.Write([]byte(strconv.FormatUint(b.index, 10)))
+	h.Write(b.last_hash)
 	h.Write([]byte(strconv.FormatUint(b.timestamp, 10)))
 
-	// XXX Add transaction information in hash computation
+	for _, txn := range b.txns {
+		h.Write(txn.hash)
+	}
+
 	hash := h.Sum(nil)
 
 	if update {
@@ -71,19 +75,7 @@ func (b *Block) Dump() string {
 	dump += fmt.Sprintf("Txn count:\t%d\n", len(b.txns))
 
 	for i := 0; i < len(b.txns); i++ {
-		dump += fmt.Sprintf("Txn: %x\n", b.txns[i].hash)
-
-		for j := 0; j < len(b.txns[i].inputs); j++ {
-			dump += fmt.Sprintf("- Input: %v\n",
-				b.txns[i].inputs[j].script.String())
-		}
-
-		for j := 0; j < len(b.txns[i].outputs); j++ {
-			dump += fmt.Sprintf("- Output: %f - %v\n",
-				b.txns[i].outputs[j].amount,
-				b.txns[i].outputs[j].script.String())
-		}
-
+		dump += b.txns[i].String()
 	}
 
 	return dump
