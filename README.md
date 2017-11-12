@@ -81,3 +81,11 @@ Input:
 Output
 
 - OP_DUP OP_HASH160 pubkeyhash OP_EQUALVERIFY OP_CHECKSIG
+
+
+Api
+---
+
+GET /mine
+
+POST /txn/add

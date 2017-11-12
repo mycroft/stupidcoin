@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 	"testing"
@@ -26,7 +27,6 @@ func TestCreateBlockchain(t *testing.T) {
 }
 
 func TestMining(t *testing.T) {
-	// func (bc *Blockchain) MineBlock(key ecdsa.PublicKey) error
 	bc := CreateBlockchain()
 	wallet := CreateTestingWallet()
 
@@ -173,4 +173,117 @@ func TestTransaction(t *testing.T) {
 	// Mined: Control
 	ControlFunds(t, wallet1, bc, 500)
 	ControlFunds(t, wallet2, bc, 0)
+}
+
+func TransferFund(bc *Blockchain, w1 *Wallet, w2 *Wallet, amount float64) {
+	txnOrder := new(TxnOrder)
+	txnOrder.Amount = amount
+	txnOrder.Addr = GetPublicKeyHash(w2.PrivateKeys[0].PublicKey)
+
+	txn, err := bc.CreateTransfertTransaction(*w1, txnOrder)
+	if err != nil {
+		panic(err)
+	}
+	bc.QueueTransaction(txn)
+}
+
+func TestSaveLoadChain(t *testing.T) {
+	bc := CreateBlockchain()
+	w1 := CreateTestingWallet()
+	w2 := CreateTestingWallet()
+
+	// Mine 1st block
+	bc.MineBlock(w1.PrivateKeys[0].PublicKey)
+	TransferFund(bc, w1, w2, 50)
+	bc.MineBlock(w1.PrivateKeys[0].PublicKey)
+
+	f1 := CheckFunds(bc, w1)
+	f2 := CheckFunds(bc, w2)
+
+	if f1 != 150 {
+		t.Errorf("Invalid sum")
+	}
+
+	if f2 != 50 {
+		t.Errorf("Invalid sum")
+	}
+
+	c := Config{Blockchain: "chain.dat"}
+	// Save blockchain.
+
+	err := bc.SaveBlockchain(c)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Load blockchain.
+	c2, err := LoadBlockchain(c)
+	if err != nil {
+		t.Error(err)
+	}
+
+	// Check c2
+	if len(bc.blocks) != len(c2.blocks) {
+		t.Error("Invalid block number")
+	}
+
+	for i := range bc.blocks {
+		if bytes.Compare(bc.blocks[i].hash, c2.blocks[i].hash) != 0 {
+			t.Errorf("Invalid hash %x / %x", bc.blocks[i].hash, c2.blocks[i].hash)
+		}
+
+		if len(bc.blocks[i].txns) != len(c2.blocks[i].txns) {
+			t.Error("Invalid txn number")
+		}
+
+		for j := range bc.blocks[i].txns {
+			txn1 := bc.blocks[i].txns[j]
+			txn2 := c2.blocks[i].txns[j]
+
+			if txn1.timestamp != txn2.timestamp {
+				t.Errorf("Invalid txn timestamp (%d/%d)", txn1.timestamp, txn2.timestamp)
+			}
+
+			if bytes.Compare(bc.blocks[i].txns[j].hash, c2.blocks[i].txns[j].hash) != 0 {
+				t.Error("Invalid txn hash")
+			}
+		}
+	}
+}
+
+func TestVerifyblock(t *testing.T) {
+	bc := CreateBlockchain()
+	w1 := CreateTestingWallet()
+	w2 := CreateTestingWallet()
+
+	// Mine 1st block
+	bc.MineBlock(w1.PrivateKeys[0].PublicKey)
+	TransferFund(bc, w1, w2, 50)
+	bc.MineBlock(w1.PrivateKeys[0].PublicKey)
+
+	// f1 := CheckFunds(bc, w1)
+	// f2 := CheckFunds(bc, w2)
+
+	// Controling blocks
+
+	for _, b := range bc.blocks {
+		h := b.ComputeHash(false)
+
+		if bytes.Compare(h, b.hash) != 0 {
+			t.Error("Invalid hash")
+		}
+
+		for _, tx := range b.txns {
+			h := tx.ComputeHash(false)
+
+			if bytes.Compare(h, tx.hash) != 0 {
+				t.Errorf("Invalid hash")
+			}
+		}
+
+		v := b.VerifyBlock()
+		if v != true {
+			t.Errorf("Invalid block")
+		}
+	}
 }

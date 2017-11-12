@@ -63,10 +63,12 @@ func (tx *Transaction) String() string {
 
 func (tx *Transaction) AddInput(input *TxInput) {
 	tx.inputs = append(tx.inputs, input)
+	tx.ComputeHash(true)
 }
 
 func (tx *Transaction) AddOutput(output *TxOutput) {
 	tx.outputs = append(tx.outputs, output)
+	tx.ComputeHash(true)
 }
 
 func (tx *Transaction) ComputeHash(update bool) []byte {
@@ -95,6 +97,7 @@ func (tx *Transaction) ComputeHash(update bool) []byte {
 // XXX to rewrite using bytes...
 func (tx *Transaction) SaveTransaction(fd *os.File) error {
 	WriteBytesToFd(fd, tx.hash)
+	WriteUint64ToFd(fd, tx.timestamp)
 
 	WriteUint32ToFd(fd, uint32(len(tx.inputs)))
 	for _, input := range tx.inputs {
@@ -117,6 +120,11 @@ func CreateTransactionFromFd(fd *os.File) (*Transaction, error) {
 	txn := CreateTransaction()
 
 	txn.hash, err = ReadBytesFromFd(fd)
+	if err != nil {
+		return nil, err
+	}
+
+	txn.timestamp, err = ReadUint64FromFd(fd)
 	if err != nil {
 		return nil, err
 	}

@@ -83,6 +83,9 @@ func (b *Block) Dump() string {
 
 func (b *Block) AddTransaction(txn *Transaction) {
 	b.txns = append(b.txns, txn)
+
+	// Recompute hash
+	b.ComputeHash(true)
 }
 
 func CreateBlockFromFd(fd *os.File) (*Block, error) {
