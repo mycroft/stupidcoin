@@ -88,7 +88,12 @@ func WebRun(config Config, wallet Wallet, chain *Blockchain) error {
 		for {
 			txnOrder := <-wd.Txn
 
-			wd.Blockchain.CreateTransaction(wd.Wallet, txnOrder)
+			txn, err := wd.Blockchain.CreateTransfertTransaction(wd.Wallet, txnOrder)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			wd.Blockchain.QueueTransaction(txn)
 		}
 	}(daemon)
 

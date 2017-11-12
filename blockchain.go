@@ -2,6 +2,8 @@ package main
 
 import (
 	"crypto/ecdsa"
+
+	"errors"
 	"fmt"
 	"os"
 )
@@ -25,12 +27,18 @@ type Blockchain struct {
 	txnQueue []*Transaction
 }
 
-func LoadBlockchain(config Config) (*Blockchain, error) {
+func CreateBlockchain() *Blockchain {
 	blockchain := new(Blockchain)
+	blockchain.last_index = 0
+
+	return blockchain
+}
+
+func LoadBlockchain(config Config) (*Blockchain, error) {
+	blockchain := CreateBlockchain()
 
 	if _, err := os.Stat(config.Blockchain); os.IsNotExist(err) {
 		fmt.Printf("No existing block chain found...\n")
-		blockchain.last_index = 0
 
 		return blockchain, nil
 	}
@@ -123,7 +131,7 @@ func (bc *Blockchain) Dump() {
 	fmt.Printf("%d block(s).\n", len(bc.blocks))
 }
 
-func (bc *Blockchain) CreateTransaction(wallet Wallet, txnOrder *TxnOrder) {
+func (bc *Blockchain) CreateTransfertTransaction(wallet Wallet, txnOrder *TxnOrder) (*Transaction, error) {
 	required_amount := txnOrder.Amount
 	used_funds := make([]*OutputFund, 0)
 	funds := bc.GetFunds(&wallet)
@@ -139,8 +147,7 @@ func (bc *Blockchain) CreateTransaction(wallet Wallet, txnOrder *TxnOrder) {
 
 	if required_amount > 0 {
 		// could not create transaction.
-		fmt.Println("Not enough funds.")
-		return
+		return nil, errors.New("Not enough funds.")
 	}
 
 	txn := new(Transaction)
@@ -176,9 +183,12 @@ func (bc *Blockchain) CreateTransaction(wallet Wallet, txnOrder *TxnOrder) {
 	}
 
 	txn.ComputeHash(true)
-	bc.txnQueue = append(bc.txnQueue, txn)
 
-	return
+	return txn, nil
+}
+
+func (bc *Blockchain) QueueTransaction(txn *Transaction) {
+	bc.txnQueue = append(bc.txnQueue, txn)
 }
 
 func TryOutput(wallet *Wallet, outputScript *Script) (*Script, bool) {
@@ -238,7 +248,6 @@ func (bc *Blockchain) GetFunds(wallet *Wallet) []*OutputFund {
 
 					funds = append(funds, of)
 
-					// break
 				}
 			}
 		}

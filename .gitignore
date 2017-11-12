@@ -2,3 +2,5 @@ stupidcoin
 config.json
 .blocks.dat
 *.key
+coverage.out
+*.json

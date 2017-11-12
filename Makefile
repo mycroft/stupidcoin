@@ -2,10 +2,13 @@ all:
 	go build
 
 test:
-	# go test
-	./stupidcoin -create-key
-	./stupidcoin -create-key
-	./stupidcoin -list-keys
+	go test
+
+coverage:
+	go test -cover
+	go test -coverprofile=coverage.out 
+	go tool cover -func=coverage.out
+	# go tool cover -html=coverage.out
 
 clean:
 	rm -f stupidcoin

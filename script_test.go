@@ -23,7 +23,7 @@ func TestScript1(t *testing.T) {
 	scp.addInstruction(OP_EQUAL)
 
 	vm := new(VM)
-	res, err := vm.runInputOutput(scp, scpOutput)
+	res, err := vm.runInputOutput(*scp, *scpOutput)
 	if err != nil {
 		t.Error(err)
 	}
@@ -53,7 +53,7 @@ func TestScript2(t *testing.T) {
 	scp.addInstruction(OP_EQUAL)
 
 	vm := new(VM)
-	res, err := vm.runInputOutput(scp, scpOutput)
+	res, err := vm.runInputOutput(*scp, *scpOutput)
 	if err != nil {
 		t.Error(err)
 	}
@@ -88,7 +88,7 @@ func TestScript3(t *testing.T) {
 
 	// Run vm over this input & output
 	vm := new(VM)
-	res, err := vm.runInputOutput(input, output)
+	res, err := vm.runInputOutput(*input, *output)
 	if err != nil {
 		t.Error(err)
 	}
@@ -124,7 +124,7 @@ func TestScript4(t *testing.T) {
 
 	// Run vm over this input & output
 	vm := new(VM)
-	res, err := vm.runInputOutput(input, output)
+	res, err := vm.runInputOutput(*input, *output)
 	if err != nil {
 		t.Error(err)
 	}
